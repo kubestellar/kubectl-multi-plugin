@@ -33,10 +33,58 @@ sudo mv kubectl-multi /usr/local/bin/kubectl-multi
 
 
 
-#to test 
+#to test
 kubectl-multi -v
 
 ```
+
+### Downloading step for Windows
+
+#### Using PowerShell (Recommended)
+```powershell
+# Step 1: Set version and download kubectl-multi binary for Windows
+$TAG = "v0.0.3"
+$VERSION = $TAG.TrimStart('v')
+
+# Download the binary
+$url = "https://github.com/kubestellar/kubectl-plugin/releases/download/$TAG/kubectl-multi_${VERSION}_windows_amd64.tar.gz"
+Invoke-WebRequest -Uri $url -OutFile "kubectl-multi_${VERSION}_windows_amd64.tar.gz"
+
+# Step 2: Extract the archive
+tar -xzf "kubectl-multi_${VERSION}_windows_amd64.tar.gz"
+
+# Step 3: Move to a directory in your PATH (e.g., C:\Program Files\kubectl-multi)
+# Create directory if it doesn't exist
+New-Item -ItemType Directory -Force -Path "C:\Program Files\kubectl-multi"
+Move-Item -Force kubectl-multi.exe "C:\Program Files\kubectl-multi\kubectl-multi.exe"
+
+# Step 4: Add to PATH if not already there
+$path = [Environment]::GetEnvironmentVariable("Path", "Machine")
+if ($path -notlike "*C:\Program Files\kubectl-multi*") {
+    [Environment]::SetEnvironmentVariable(
+        "Path",
+        "$path;C:\Program Files\kubectl-multi",
+        "Machine"
+    )
+    Write-Host "Added kubectl-multi to PATH. Please restart your terminal."
+}
+
+# Test installation (restart terminal first)
+kubectl-multi -v
+```
+
+#### Manual Installation (Alternative)
+1. Download the Windows binary from the [releases page](https://github.com/kubestellar/kubectl-plugin/releases/latest)
+   - Look for `kubectl-multi_*_windows_amd64.tar.gz`
+2. Extract the archive using 7-Zip, WinRAR, or Windows built-in tar
+3. Move `kubectl-multi.exe` to a directory in your PATH:
+   - Example: `C:\Program Files\kubectl-multi\`
+   - Or add it to an existing PATH directory like `C:\Windows\System32\`
+4. Add the directory to your PATH environment variable:
+   - Search for "Environment Variables" in Windows Settings
+   - Edit the "Path" variable under System variables
+   - Add the directory containing `kubectl-multi.exe`
+5. Restart your terminal and test: `kubectl-multi -v`
 
 ### Downloading by brew
 ```bash 
