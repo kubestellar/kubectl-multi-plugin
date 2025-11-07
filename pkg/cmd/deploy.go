@@ -74,25 +74,25 @@ create ITSes (Inventory and Transport Spaces), and WDSes (Workload Description S
 
 Examples:
   # Basic installation with KubeFlex only
-  kubectl ks install
+  kubectl multi install
   
   # Install with one ITS and one WDS
-  kubectl ks install --its its1 --wds wds1
+  kubectl multi install --its its1 --wds wds1
   
   # Install with custom cluster name
-  kubectl ks install --cluster-name my-cluster --its its1 --wds wds1
+  kubectl multi install --cluster-name my-cluster --its its1 --wds wds1
   
   # Install for OpenShift
-  kubectl ks install --openshift
+  kubectl multi install --openshift
   
   # Install with custom domain and port (for Kind clusters)
-  kubectl ks install --domain example.com --port 8443 --cluster-name my-kind-cluster
+  kubectl multi install --domain example.com --port 8443 --cluster-name my-kind-cluster
   
   # Install specific version
-  kubectl ks install --version v0.28.0
+  kubectl multi install --version v0.28.0
   
   # Dry run to see what would be installed
-  kubectl ks install --dry-run --its its1 --wds wds1`,
+  kubectl multi install --dry-run --its its1 --wds wds1`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := o.Validate(); err != nil {
 				return err
@@ -360,7 +360,7 @@ func (o *InstallOptions) printPostInstallInstructions() {
 		}
 	} else {
 		fmt.Fprintf(o.Out, "\n1. Create control planes using additional helm commands or:\n")
-		fmt.Fprintf(o.Out, "   kubectl ks install --its its1 --wds wds1\n")
+		fmt.Fprintf(o.Out, "   kubectl multi install --its its1 --wds wds1\n")
 	}
 
 	fmt.Fprintf(o.Out, "\n📖 For more information, visit: https://docs.kubestellar.io/\n")
