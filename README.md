@@ -37,6 +37,10 @@ sudo mv kubectl-multi /usr/local/bin/kubectl-multi
 kubectl-multi -v
 
 ```
+## Downloading steps for windows 
+
+Refer to this ->  **[Installation Guide](docs/installation_guide_windows.md)**
+
 
 ### Downloading by brew
 ```bash 
