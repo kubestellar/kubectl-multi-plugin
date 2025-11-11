@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -11,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/duration"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"kubectl-multi/pkg/cluster"
 	"kubectl-multi/pkg/util"
@@ -100,8 +104,15 @@ kubectl multi get pods -l app=nginx
 # Get specific pod across all clusters
 kubectl multi get pod nginx-pod
 
-# Get services with wide output
-kubectl multi get services -o wide`,
+# Get deployments with wide output
+kubectl multi get services -o wide
+
+# Get pods in JSON format
+kubectl multi get pods -o json
+
+# Get deployments in YAML format
+kubectl multi get deployments -o yaml
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return fmt.Errorf("resource type must be specified")
@@ -139,6 +150,11 @@ func handleGetCommand(args []string, outputFormat, selector string, showLabels, 
 	clusters, err := cluster.DiscoverClusters(kubeconfig, remoteCtx)
 	if err != nil {
 		return fmt.Errorf("failed to discover clusters: %v", err)
+	}
+
+	// If output format is provided use custom output format handler instead of default table format
+	if outputFormat != "" {
+		return handleGetWithOutputFormat(clusters, resourceName, resourceType, outputFormat, selector, namespace, allNamespaces)
 	}
 
 	tw := tabwriter.NewWriter(util.GetOutputStream(), 0, 0, 2, ' ', 0)
@@ -2388,4 +2404,111 @@ func handleStorageClassesGet(tw *tabwriter.Writer, clusters []cluster.ClusterInf
 	}
 
 	return nil
+}
+
+// handleGetWithOutputFormat handles get command when output format is provided
+func handleGetWithOutputFormat(clusters []cluster.ClusterInfo, resourceName, resourceType, outputFormat, selector string, namespace string, allNamespaces bool) error {
+
+	// Find current context from kubeconfig
+	currentContext := ""
+	{
+		loading := clientcmd.NewDefaultClientConfigLoadingRules()
+		if kubeconfig != "" {
+			loading.ExplicitPath = kubeconfig
+		}
+		cfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loading, &clientcmd.ConfigOverrides{})
+		rawCfg, err := cfg.RawConfig()
+		if err == nil {
+			currentContext = rawCfg.CurrentContext
+		}
+	}
+
+	// Identify ITS (control) cluster context
+	itsContext := remoteCtx
+
+	// Build maps for quick lookup
+	contextToCluster := make(map[string]cluster.ClusterInfo)
+	for _, c := range clusters {
+		contextToCluster[c.Context] = c
+	}
+
+	// 1. Run for current context (if present)
+	if cinfo, ok := contextToCluster[currentContext]; ok {
+		kubectlArgs := buildKubectlGetArgs(resourceType, resourceName, outputFormat, selector, namespace, allNamespaces, cinfo.Context)
+		output, err := runKubectlGet(kubectlArgs, kubeconfig)
+		fmt.Printf("=== Cluster: %s ===\n", cinfo.Context)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+		} else {
+			fmt.Print(output)
+		}
+		fmt.Println()
+	}
+
+	// 2. Run for KubeStellar clusters (excluding ITS and current)
+	for _, c := range clusters {
+		if c.Context == currentContext || c.Context == itsContext {
+			continue
+		}
+		kubectlArgs := buildKubectlGetArgs(resourceType, resourceName, outputFormat, selector, namespace, allNamespaces, c.Context)
+		output, err := runKubectlGet(kubectlArgs, kubeconfig)
+		fmt.Printf("=== Cluster: %s ===\n", c.Context)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+		} else {
+			fmt.Print(output)
+		}
+		fmt.Println()
+	}
+
+	// 3. Print warning for ITS (control) cluster
+	if cinfo, ok := contextToCluster[itsContext]; ok {
+		fmt.Printf("=== Cluster: %s ===\n", cinfo.Context)
+		fmt.Printf("Cannot perform this operation on ITS (control) cluster: %s\n", cinfo.Context)
+		fmt.Println()
+	}
+
+	return nil
+}
+
+// buildKubectlGetArgs builds kubectl get command arguments
+func buildKubectlGetArgs(resourceType, resourceName, outputFormat, selector, namespace string, allNamespaces bool, context string) []string {
+	args := []string{"get", resourceType}
+
+	if resourceName != "" {
+		args = append(args, resourceName)
+	}
+
+	if outputFormat != "" {
+		args = append(args, "-o", outputFormat)
+	}
+
+	if selector != "" {
+		args = append(args, "-l", selector)
+	}
+
+	if allNamespaces {
+		args = append(args, "-A")
+	} else if namespace != "" {
+		args = append(args, "-n", namespace)
+	}
+
+	args = append(args, "--context", context)
+
+	return args
+}
+
+// runKubectlGet runs a kubectl command with the given args and kubeconfig, returns output and error
+func runKubectlGet(args []string, kubeconfig string) (string, error) {
+	cmd := exec.Command("kubectl", args...)
+	if kubeconfig != "" {
+		cmd.Env = append(os.Environ(), "KUBECONFIG="+kubeconfig)
+	}
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return stdout.String() + stderr.String(), err
+	}
+	return stdout.String(), nil
 }
