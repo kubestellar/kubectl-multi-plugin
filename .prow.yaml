@@ -2,7 +2,7 @@ presubmits:
   - name: pull-kubestellar-verify
     always_run: true
     decorate: true
-    clone_uri: "https://github.com/kubestellar/kubestellar"
+    clone_uri: "https://github.com/kubestellar/kubectl-multi-plugin"
     spec:
       containers:
         - image: ghcr.io/kubestellar/infra/build:1.24.2-1
@@ -19,7 +19,7 @@ presubmits:
   - name: pull-kubestellar-lint
     always_run: true
     decorate: true
-    clone_uri: "https://github.com/kubestellar/kubestellar"
+    clone_uri: "https://github.com/kubestellar/kubectl-multi-plugin"
     spec:
       containers:
         - image: ghcr.io/kubestellar/infra/build:1.24.2-1
@@ -34,7 +34,7 @@ presubmits:
   - name: pull-kubestellar-test-unit
     always_run: true
     decorate: true
-    clone_uri: "https://github.com/kubestellar/kubestellar"
+    clone_uri: "https://github.com/kubestellar/kubectl-multi-plugin"
     labels:
       preset-goproxy: "true"
     spec:
