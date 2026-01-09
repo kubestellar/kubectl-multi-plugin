@@ -8,9 +8,7 @@ presubmits:
         - image: ghcr.io/kubestellar/infra/build:1.24.2-1
           command:
             - make
-            - verify-go-versions
-            - verify-imports
-            - verify-modules
+            - vet
           resources:
             requests:
               memory: 1Gi
