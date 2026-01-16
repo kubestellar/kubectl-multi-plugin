@@ -29,3 +29,16 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Trigger docs version branch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.WORKFLOW_SYNC_TOKEN }}
+          repository: kubestellar/docs
+          event-type: create-version-branch
+          client-payload: |
+            {
+              "project": "multi-plugin",
+              "version": "${{ github.ref_name }}",
+              "source_repo": "${{ github.repository }}",
+              "source_branch": "main"
+            }
